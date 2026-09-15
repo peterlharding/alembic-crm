@@ -18,7 +18,7 @@ CREATE TABLE public.instance_metadata (
 CREATE UNIQUE INDEX instance_metadata_singleton ON public.instance_metadata ((true));
 
 --  ---------------------------------------------------------------------------
--- Revision 010 replaces this trigger with instance_metadata_set_modified_at.
+-- Revision CRM_006 replaces this trigger with instance_metadata_set_modified_at.
 -- New tables should call public.set_modified_at().
 CREATE TRIGGER instance_metadata_set_when_modified
     BEFORE UPDATE ON public.instance_metadata

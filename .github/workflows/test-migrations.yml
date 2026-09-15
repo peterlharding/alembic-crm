@@ -8,10 +8,11 @@ on:
       - alembic.ini
       - db/**
       - scripts/test_migrations.sh
+      - scripts/check_models.py
+      - app/**
       - Makefile
-      - env.example
+      - setup/env.example
       - pyproject.toml
-      - uv.lock
       - .github/workflows/test-migrations.yml
   pull_request:
     paths: *migration-paths
@@ -36,10 +37,11 @@ jobs:
         with:
           enable-cache: true
 
-      # Fails if uv.lock is out of date instead of silently re-resolving
+      # uv.lock is deliberately not committed, so resolve from pyproject.toml.
+      # The default cache key already hashes pyproject.toml.
       - name: Install dependencies
-        run: uv sync --locked
+        run: uv sync
 
-      # No .env in CI: the Makefile and the script fall back to env.example
+      # No .env in CI: the script falls back to setup/env.example
       - name: Run make test-migrations
         run: make test-migrations

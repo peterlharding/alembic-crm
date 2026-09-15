@@ -4,7 +4,8 @@
 #
 #   1. upgrade one revision at a time from base to head, snapshotting the
 #      schema and row counts after each step
-#   2. check that UPDATE stamps modified_at
+#   2. check that UPDATE stamps modified_at, and that the SQLAlchemy models
+#      in app/models match the schema and can load every row
 #   3. downgrade one revision at a time, comparing each step with the snapshot
 #      taken on the way up
 #   4. upgrade base to head in one go, compare with the head snapshot and
@@ -15,6 +16,7 @@
 # Environment overrides:
 #   TEST_PG_IMAGE  Postgres image (default postgres:$PG_VERSION)
 #   ALEMBIC        alembic command (default: uv run --quiet alembic)
+#   PYTHON         python command (default: uv run --quiet python)
 #
 # -----------------------------------------------------------------------------
 
@@ -23,15 +25,16 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 env_file=.env
-[[ -f $env_file ]] || env_file=env.example
+[[ -f $env_file ]] || env_file=setup/env.example
 set -a
-# shellcheck source=env.example
+# shellcheck source=setup/env.example
 . "./$env_file"
 set +a
 
 image=${TEST_PG_IMAGE:-postgres:${PG_VERSION}}
 container=alembic-demo-test-$$
 read -r -a alembic <<< "${ALEMBIC:-uv run --quiet alembic}"
+read -r -a python <<< "${PYTHON:-uv run --quiet python}"
 
 work=$(mktemp -d)
 cleanup() {
@@ -89,6 +92,11 @@ check_modified_at() {
         || fail "modified_at check at $(current)"
 }
 
+check_models() {
+    "${python[@]}" scripts/check_models.py 2>&1 | sed 's/^/    /' \
+        || fail "models do not match the schema at $(current)"
+}
+
 
 # -----------------------------------------------------------------------------
 
@@ -118,7 +126,7 @@ export PG_PORT=${PG_PORT##*:}
 docker exec -i \
     -e DEMO_ROLE="$DEMO_ROLE" -e DEMO_PASSWORD="$DEMO_PASSWORD" -e DEMO_DB="$DEMO_DB" \
     "$container" psql -X -q -v ON_ERROR_STOP=1 -U "$PG_ADMIN_USER" -d postgres \
-    < db/create/create_api_user.sql
+    < db/sql/create_api_user.sql
 
 head_rev=$("${alembic[@]}" heads 2> /dev/null | awk '{print $1}')
 [[ $(wc -w <<< "$head_rev") -eq 1 ]] || fail "expected one head, got: $head_rev"
@@ -140,6 +148,9 @@ done
 
 echo "Checking modified_at at head"
 check_modified_at
+
+echo "Checking models against the schema at head"
+check_models
 
 echo "Downgrading one revision at a time"
 

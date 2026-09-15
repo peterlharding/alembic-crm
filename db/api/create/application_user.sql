@@ -32,7 +32,6 @@ CREATE UNIQUE INDEX application_user_email_lower_key
 
 
 --  ---------------------------------------------------------------------------
--- Revision 010 replaces this trigger with application_user_set_modified_at.
 -- New tables should call public.set_modified_at().
 CREATE TRIGGER application_user_set_modified_at
     BEFORE UPDATE ON public.application_user

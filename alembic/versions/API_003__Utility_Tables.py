@@ -2,7 +2,7 @@
 # 
 # -----------------------------------------------------------------------------
 """
-  Install instance_metadata, audit_log and session_log tables
+  Install instance_metadata, audit_log and login_session tables
 """
 # -----------------------------------------------------------------------------
 
@@ -30,6 +30,7 @@ def upgrade() -> None:
 # -----------------------------------------------------------------------------
 
 def downgrade() -> None:
+    op.execute("DROP VIEW IF EXISTS login_session_active")
     op.execute("DROP TABLE IF EXISTS login_session")
     op.execute("DROP TABLE IF EXISTS audit_log")
     op.execute("DROP TABLE IF EXISTS instance_metadata")

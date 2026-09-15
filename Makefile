@@ -1,7 +1,7 @@
 #
 # Note:
 #
-# 1) Copy env.example to .env and customize appropriately before using any
+# 1) Copy setup/env.example to .env and customize appropriately before using any
 #    of these recipes.
 #
 # -----------------------------------------------------------------------------
@@ -74,10 +74,11 @@ test-migrations:
 setup-api-role:
 	@echo "Setup api role and demo database..."
 	set -a; . ./.env && \
-	psql -h 127.0.0.1  -p ${PG_PORT} -U ${PG_ADMIN_USER} -f db/create/create_api_user.sql
+	psql -h 127.0.0.1  -p ${PG_PORT} -U ${PG_ADMIN_USER} -f db/sql/create_api_user.sql
 
 drop-api-role:
-	psql -h 127.0.0.1  -p ${PG_PORT} -U ${PG_ADMIN_USER} -f db/drop/drop_api_user.sql
+	set -a; . ./.env && \
+	psql -h 127.0.0.1  -p ${PG_PORT} -U ${PG_ADMIN_USER} -f db/sql/drop_api_user.sql
 
 connect-su:
 	psql -h 127.0.0.1 -p ${PG_PORT} -U postgres
@@ -93,11 +94,11 @@ up:
 	docker ps
 
 down:
-	docker compose down
+	docker compose --profile adminer down
 	docker ps
 
 destroy:
-	docker compose down -v
+	docker compose --profile adminer down -v
 	docker ps
 
 
@@ -107,7 +108,7 @@ destroy:
 
 reset:
 	@echo "Reset the docker environment"
-	docker compose down -v --remove-orphans
+	docker compose --profile adminer down -v --remove-orphans
 	sleep 1
 	docker compose up -d
 	@printf 'Waiting for postgres...'

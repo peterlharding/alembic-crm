@@ -4,10 +4,6 @@
 services:
 
   postgres:
-    build:
-      context: .
-      args:
-        PG_VERSION: ${PG_VERSION}
     image: postgres:${PG_VERSION}
     container_name: ${DATABASE_CONTAINER_NAME}
     restart: always

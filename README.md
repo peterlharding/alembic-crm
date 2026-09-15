@@ -83,7 +83,7 @@ Installed 24 packages in 23ms
 ## Step 3: Create and Customize a .env File
 
 ```bash
-cp env.example .env
+cp setup/env.example .env
 ```
 
 This sets up docker to run postgres on a local port 5433.  If you
@@ -106,24 +106,26 @@ will need to customize the values of:
 
 Run:
 
-``bash
+```bash
 make up
 ```
+
 You should see something like this:
 
 ```bash
 % make up
 docker compose up -d
-[+] up 4/4
- ✔ Network alembic-crm_local-alembic-net Created      0.0s
- ✔ Volume alembic-crm_pgdata             Created      0.0s
- ✔ Container alembic-postgres            Started      0.1s
- ✔ Container alembic-adminer             Started      0.2s
+ Network alembic-crm_crm-demo-net Created
+ Volume alembic-crm_crm_db Created
+ Container alembic-postgres Started
 docker ps
-CONTAINER ID   IMAGE               COMMAND                  CREATED                  STATUS                  PORTS                     NAMES
-cde83ea1d490   adminer             "entrypoint.sh docke…"   Less than a second ago   Up Less than a second   127.0.0.1:8081->8080/tcp  alembic-adminer
-170b08f4d38a   postgres:18-vector  "docker-entrypoint.s…"   Less than a second ago   Up Less than a second   127.0.0.1:5433->5432/tcp  alembic-postgres
+CONTAINER ID   IMAGE         COMMAND                  CREATED                  STATUS                  PORTS                      NAMES
+044fea8fdb0e   postgres:18   "docker-entrypoint.s…"   Less than a second ago   Up Less than a second   127.0.0.1:5433->5432/tcp   alembic-postgres
 ```
+
+Adminer, a web UI for browsing the database, sits behind a compose profile and is not started by `make up`.
+Start it with `docker compose --profile adminer up -d` and open `http://127.0.0.1:8433` (the `ADMINER_PORT` from `.env`).
+`make down`, `make destroy` and `make reset` stop it along with postgres.
 
 Once the database is up you can connect as postgres, the DB superuser
 role and inspect the instance as show in the transcript below using
@@ -163,7 +165,7 @@ The default postgres user password is contained in the .env
 file.  You will need this for the setup.
 
 ```bash
-make setup-user-role
+make setup-api-role
 ```
 
 You should see this:
@@ -173,7 +175,7 @@ You should see this:
 
 Setup api role and demo database...
 set -a; . ./.env && \
-	psql -h 127.0.0.1  -p 5433 -U postgres -f db/create/create_api_user.sql
+	psql -h 127.0.0.1  -p 5433 -U postgres -f db/sql/create_api_user.sql
 CREATE ROLE
 CREATE DATABASE
 CREATE DATABASE
@@ -237,7 +239,7 @@ and some starter data.
 
 Run:
 
-```base
+```bash
 alembic upgrade head
 ```
 
@@ -247,21 +249,26 @@ You should see:
 % alembic upgrade head
 INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
 INFO  [alembic.runtime.migration] Will assume transactional DDL.
-INFO  [alembic.runtime.migration] Running upgrade  -> 001_set_when_modified, Install set_when_modified trigger function
-INFO  [alembic.runtime.migration] Running upgrade 001_set_when_modified -> 002__install_api_credentials, Install api_credentials table
-INFO  [alembic.runtime.migration] Running upgrade 002__install_api_credentials -> 003__install_instance_metadata, Install instance_metadata table
-INFO  [alembic.runtime.migration] Running upgrade 003__install_instance_metadata -> 004__install_application_user, Install application_user table
-INFO  [alembic.runtime.migration] Running upgrade 004__install_application_user -> 005__install_token_blacklist, Install token_blacklist table
-INFO  [alembic.runtime.migration] Running upgrade 005__install_token_blacklist -> 006__install_login_session, Install login_session table
-INFO  [alembic.runtime.migration] Running upgrade 006__install_login_session -> 007__install_audit_log, Install audit_log table
-INFO  [alembic.runtime.migration] Running upgrade 007__install_audit_log -> 008__add_api_credentials_user, Add api credentials user
-INFO  [alembic.runtime.migration] Running upgrade 008__add_api_credentials_user -> 009__add_admin_user, Add admin user
-INFO  [alembic.runtime.migration] Running upgrade 009__add_admin_user -> 010__install_set_modified_at, Replace set_when_modified() with set_modified_at()
+INFO  [alembic.runtime.migration] Running upgrade  -> API_001__DDL, Install trigger functions
+INFO  [alembic.runtime.migration] Running upgrade API_001__DDL -> API_002__Credentials, Install api_credentials and token_blacklist tables
+INFO  [alembic.runtime.migration] Running upgrade API_002__Credentials -> API_003__Utility_Tables, Install instance_metadata, audit_log and login_session tables
+INFO  [alembic.runtime.migration] Running upgrade API_003__Utility_Tables -> CRM_001, Install application_user, access and user_role tables
+INFO  [alembic.runtime.migration] Running upgrade CRM_001 -> CRM_002, Install task and event tables
+INFO  [alembic.runtime.migration] Running upgrade CRM_002 -> CRM_003, Install document, note and attachment tables
+INFO  [alembic.runtime.migration] Running upgrade CRM_003 -> CRM_004, Install contact and account tables
+INFO  [alembic.runtime.migration] Running upgrade CRM_004 -> CRM_005, Install lead, opportunity and quote tables
+INFO  [alembic.runtime.migration] Running upgrade CRM_005 -> CRM_006, Replace set_when_modified() with set_modified_at()
+INFO  [alembic.runtime.migration] Running upgrade CRM_006 -> CRM_007, Install set_modified_at triggers on CRM tables
+INFO  [alembic.runtime.migration] Running upgrade CRM_007 -> CRM_008, Load sample data
 ```
 
-The various script files used by alembic to initilize the database
-tables live in alembic/versions. These scripts reference SQL scripts
-contained in db/create and db/data.
+The revision scripts alembic runs live in `alembic/versions`.
+Each one loads SQL scripts from `db/api` (trigger functions, credentials and utility tables) or `db/crm` (the CRM tables).
+Run `alembic` from the repository root, because the revisions open those SQL files by relative path.
+
+The last revision, `CRM_008`, loads one or two sample rows into every table from the `data` directories.
+They tell one small story: two customer accounts with a contact each, an open lead and a converted one, and the opportunities, quotes, tasks, events, notes and documents that go with them.
+The schema declares no foreign keys, so the `*_id` columns in the sample data rely on each table being empty when it is loaded and handing out ids 1 and 2.
 
 If you now check the database you should see:
 
@@ -275,30 +282,54 @@ alembic_demo=> \d
                   List of relations
  Schema |          Name           |   Type   | Owner 
 --------+-------------------------+----------+-------
+ public | access                  | table    | api
+ public | access_id_seq           | sequence | api
+ public | account                 | table    | api
+ public | account_id_seq          | sequence | api
  public | alembic_version         | table    | api
  public | api_credentials         | table    | api
  public | api_credentials_id_seq  | sequence | api
  public | application_user        | table    | api
  public | application_user_id_seq | sequence | api
+ public | attachment              | table    | api
+ public | attachment_id_seq       | sequence | api
  public | audit_log               | table    | api
  public | audit_log_id_seq        | sequence | api
+ public | contact                 | table    | api
+ public | contact_id_seq          | sequence | api
+ public | document                | table    | api
+ public | document_id_seq         | sequence | api
+ public | event                   | table    | api
+ public | event_id_seq            | sequence | api
  public | instance_metadata       | table    | api
+ public | lead                    | table    | api
+ public | lead_id_seq             | sequence | api
  public | login_session           | table    | api
  public | login_session_active    | view     | api
  public | login_session_id_seq    | sequence | api
+ public | note                    | table    | api
+ public | note_id_seq             | sequence | api
+ public | opportunity             | table    | api
+ public | opportunity_id_seq      | sequence | api
+ public | quote                   | table    | api
+ public | quote_id_seq            | sequence | api
+ public | task                    | table    | api
+ public | task_id_seq             | sequence | api
  public | token_blacklist         | table    | api
-(12 rows)
+ public | user_role               | table    | api
+ public | user_role_id_seq        | sequence | api
+(36 rows)
 
 alembic_demo=> select * from api_credentials;
- id |              user_guid               |      email      |                         hashed_password                          |          created_at           
-----+--------------------------------------+-----------------+------------------------------------------------------------------+-------------------------------
-  1 | d2edb783-8349-4df2-a51e-aac1948ab147 | api@example.com | 6a078acf8050a3b1c19b5ddf78d76d09fd934dd6c4ac331be8a00784f202db00 | 2026-08-28 03:18:39.450095+00
+ id |                 guid                 |      email      |                         hashed_password                          |          created_at           |          updated_at           
+----+--------------------------------------+-----------------+------------------------------------------------------------------+-------------------------------+-------------------------------
+  1 | d2edb783-8349-4df2-a51e-aac1948ab147 | api@example.com | 6a078acf8050a3b1c19b5ddf78d76d09fd934dd6c4ac331be8a00784f202db00 | 2026-09-15 10:35:11.335556+00 | 2026-09-15 10:35:11.335556+00
 (1 row)
 
-alembic_demo=> select * from application_user;
- id |              user_guid               | username |                          password_hash                           |       email       | first_name | last_name | role  | is_active | notes | last_login |          created_at           |          modified_at          
-----+--------------------------------------+----------+------------------------------------------------------------------+-------------------+------------+-----------+-------+-----------+-------+------------+-------------------------------+-------------------------------
-  1 | 3b3fb7f6-1c39-452e-a5bb-262e58618ceb | admin    | a81b423e3b1afc6e915f934c7e364d4201c4ccb1df00e890e6eabc89b549a775 | admin@example.com | Admin      | User      | admin | t         |       |            | 2026-08-28 03:18:39.450095+00 | 2026-08-28 03:18:39.450095+00
+alembic_demo=> select * from instance_metadata;
+ release | app_version | db_version |        notes         |          modified_at          
+---------+-------------+------------+----------------------+-------------------------------
+ dev     | v0.1.0      | v0.1.0     | Schema modernisation | 2026-09-15 10:35:11.335556+00
 (1 row)
 
 alembic_demo=> \q
@@ -313,12 +344,10 @@ To do this you can either run 'make destroy':
 
 ```bash
 % make destroy
-docker compose down -v
-[+] down 4/4
- ✔ Container alembic-adminer              Removed                                                                                                                                         0.1s
- ✔ Container alembic-postgres             Removed                                                                                                                                         0.2s
- ✔ Volume alembic-crm_pgdata             Removed                                                                                                                                         0.0s
- ✔ Network alembic-crm_local-alembic-net Removed        
+docker compose --profile adminer down -v
+ Container alembic-postgres Removed
+ Volume alembic-crm_crm_db Removed
+ Network alembic-crm_crm-demo-net Removed
 ```
 
 and then re-apply the above steps.  The 'destroy' fires a 'docker
@@ -334,24 +363,20 @@ upgrade head' to reinstall all the tables.
 ```bash
 % make reset
 Reset the docker environment
-docker compose down -v --remove-orphans
-[+] down 4/4
- ✔ Container alembic-adminer              Removed                                                                                                                                         0.1s
- ✔ Container alembic-postgres             Removed                                                                                                                                         0.1s
- ✔ Volume alembic-crm_pgdata             Removed                                                                                                                                         0.0s
- ✔ Network alembic-crm_local-alembic-net Removed                                                                                                                                         0.1s
+docker compose --profile adminer down -v --remove-orphans
+ Container alembic-postgres Removed
+ Volume alembic-crm_crm_db Removed
+ Network alembic-crm_crm-demo-net Removed
 sleep 1
 docker compose up -d
-[+] up 4/4
- ✔ Network alembic-crm_local-alembic-net Created                                                                                                                                         0.0s
- ✔ Volume alembic-crm_pgdata             Created                                                                                                                                         0.0s
- ✔ Container alembic-postgres             Started                                                                                                                                         0.1s
- ✔ Container alembic-adminer              Started                                                                                                                                         0.2s
+ Network alembic-crm_crm-demo-net Created
+ Volume alembic-crm_crm_db Created
+ Container alembic-postgres Started
 Waiting for postgres.... now setup api role...
-
+make setup-api-role
 Setup api role and demo database...
 set -a; . ./.env && \
-	psql -h 127.0.0.1  -p 5433 -U postgres -f db/create/create_api_user.sql
+	psql -h 127.0.0.1  -p 5433 -U postgres -f db/sql/create_api_user.sql
 CREATE ROLE
 CREATE DATABASE
 CREATE DATABASE
@@ -374,33 +399,70 @@ role/user after freeing or deleting attached database resources.
 It upgrades one revision at a time and snapshots the schema and row counts after each step.
 It then downgrades one revision at a time and checks that every step restores the snapshot taken on the way up.
 Finally it upgrades from base to head in one go and compares the result with the stepwise upgrade.
-At head it also checks that an UPDATE stamps `modified_at` on every table that has that column.
+At head it also checks that an UPDATE stamps `modified_at` on every table that has that column and at least one row.
+It then checks that the SQLAlchemy models in `app/models` match the schema and can load every row (see below).
 
 ```bash
 % make test-migrations
 scripts/test_migrations.sh
-Starting postgres:18 as alembic-crm-test-27203
+Starting postgres:18 as alembic-demo-test-4255
 Upgrading one revision at a time
-  ok  up to   001_set_when_modified
+  ok  up to   API_001__DDL
   ...
-  ok  up to   010__install_set_modified_at
+  ok  up to   CRM_008
 Checking modified_at at head
-    NOTICE:  ok application_user: modified_at stamped on 1 rows
-    NOTICE:  ok instance_metadata: modified_at stamped on 1 rows
+    NOTICE:  ok attachment: modified_at stamped on 2 rows
+    ...
+    NOTICE:  ok user_role: modified_at stamped on 2 rows
+Checking models against the schema at head
+    ok  18 models match the database
+    ok  Access: loaded 2 row(s)
+    ...
+    ok  UserRole: loaded 2 row(s)
 Downgrading one revision at a time
-  ok  down to 009__add_admin_user
+  ok  down to CRM_007
   ...
   ok  down to base
 Upgrading base to head in one step
-  ok  up to   010__install_set_modified_at
-    NOTICE:  ok application_user: modified_at stamped on 1 rows
-    NOTICE:  ok instance_metadata: modified_at stamped on 1 rows
-PASS: 11 states, every upgrade and downgrade verified
+  ok  up to   CRM_008
+    NOTICE:  ok attachment: modified_at stamped on 2 rows
+    ...
+    NOTICE:  ok user_role: modified_at stamped on 2 rows
+PASS: 12 states, every upgrade and downgrade verified
 ```
+
+Without a `.env` (as in CI) the script reads `setup/env.example` instead.
 
 Run it after adding or editing a revision.
 GitHub Actions also runs it, via `.github/workflows/test-migrations.yml`, on pushes to `main` and on pull requests that touch the migrations or their tooling.
 A downgrade error only shows up when someone downgrades, and this is the cheapest way to find it first.
+
+
+# SQLAlchemy Models
+
+`app/models` holds one SQLAlchemy 2.0 model per table, for use by an API.
+The SQL files and the Alembic revisions still own the schema: the models mirror it and are never used to create or migrate it, which is why `alembic/env.py` has no `target_metadata`.
+
+```python
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
+
+from app.models import Opportunity
+
+engine = create_engine("postgresql+psycopg2://api:Much-More-Secret@127.0.0.1:5433/alembic_demo")
+
+with Session(engine) as session:
+    open_deals = session.scalars(select(Opportunity).where(Opportunity.is_closed.is_(False))).all()
+```
+
+`scripts/check_models.py` compares the models with a migrated database using Alembic's autogenerate comparison (tables, columns, types, nullability, server defaults, indexes and unique constraints) and then loads every row through each model.
+`make test-migrations` runs it at head; to run it against your own database once it is at head:
+
+```bash
+uv run python scripts/check_models.py
+```
+
+If you change a table's SQL, update its model in the same change, or the check fails.
 
 
 # Notes
