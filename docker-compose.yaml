@@ -1,0 +1,45 @@
+# Use postgres/example user/password credentials
+#
+
+services:
+
+  postgres:
+    build:
+      context: .
+      args:
+        PG_VERSION: ${PG_VERSION}
+    image: postgres:${PG_VERSION}
+    container_name: ${DATABASE_CONTAINER_NAME}
+    restart: always
+    environment:
+      - POSTGRES_USER=${PG_ADMIN_USER}
+      - POSTGRES_PASSWORD=${PG_ADMIN_PASSWORD}
+    ports:
+      - 127.0.0.1:${PG_PORT}:5432
+    volumes:
+      - crm_db:/var/lib/postgresql
+      - ./data/bak:/bak
+      - ./data/root:/root
+    networks:
+      - crm-demo-net
+
+  adminer:
+    image: adminer
+    profiles: ["adminer"]
+    container_name: ${ADMINER_CONTAINER_NAME}
+    restart: always
+    ports:
+      - 127.0.0.1:${ADMINER_PORT}:8080
+    networks:
+      - crm-demo-net
+    depends_on:
+      - postgres
+
+volumes:
+  crm_db:
+
+networks:
+  crm-demo-net:
+    external: false
+
+

@@ -1,3 +1,35 @@
+
+# IDEs
+.vscode/
+.idea/
+
+# Archives
+*.7z
+*.gz
+*.rar
+*.tar
+*.tz
+*.zip
+
+# Sensitive
+*.pem
+*.crt
+*.csr
+*.key
+
+# macOS
+.DS_Store
+
+# Just Ignore
+*.x
+*-ignore
+
+# Project Specific (for the moment)
+data/postgres/
+!db/data
+
+
+# -----------------------------------------------------------------------------
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -98,7 +130,7 @@ ipython_config.py
 #   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
 #   commonly ignored for libraries.
-# uv.lock
+uv.lock
 
 # poetry
 #   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.

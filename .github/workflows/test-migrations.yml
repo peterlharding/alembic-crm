@@ -1,0 +1,45 @@
+name: Test migrations
+
+on:
+  push:
+    branches: [main]
+    paths: &migration-paths
+      - alembic/**
+      - alembic.ini
+      - db/**
+      - scripts/test_migrations.sh
+      - Makefile
+      - env.example
+      - pyproject.toml
+      - uv.lock
+      - .github/workflows/test-migrations.yml
+  pull_request:
+    paths: *migration-paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-migrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+
+      # Fails if uv.lock is out of date instead of silently re-resolving
+      - name: Install dependencies
+        run: uv sync --locked
+
+      # No .env in CI: the Makefile and the script fall back to env.example
+      - name: Run make test-migrations
+        run: make test-migrations
