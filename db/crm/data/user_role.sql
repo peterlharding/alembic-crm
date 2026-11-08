@@ -14,7 +14,7 @@ INSERT INTO public.user_role (
     contact_access_for_account_owner,
     forecast_user_id,
     portal_type,
-    modified_by_id,
+    updated_by_id,
     created_by_id
 ) VALUES
 (

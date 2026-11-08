@@ -26,7 +26,7 @@ INSERT INTO public.task (
     call_disposition,
     is_reminder_set,
     reminder_datetime,
-    modified_by_id,
+    updated_by_id,
     created_by_id
 ) VALUES
 (

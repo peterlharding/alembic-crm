@@ -28,7 +28,7 @@ INSERT INTO public.opportunity (
     last_activity_date,
     fiscal_year,
     fiscal_quarter,
-    modified_by_id,
+    updated_by_id,
     created_by_id
 ) VALUES
 (

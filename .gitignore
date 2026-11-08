@@ -28,6 +28,10 @@
 data/postgres/
 !db/data
 
+# ChatGPT
+AGENTS.md
+.agents/
+
 
 # -----------------------------------------------------------------------------
 # Byte-compiled / optimized / DLL files

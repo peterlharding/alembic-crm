@@ -35,8 +35,8 @@ class Attachment(Base):
     is_deleted:             Mapped[bool | None]      = mapped_column(Boolean, server_default=text("false"))
     is_private:             Mapped[bool | None]      = mapped_column(Boolean, server_default=text("false"))
 
-    modified_at:            Mapped[datetime]         = mapped_column(DateTime(timezone=True), server_default=func.now())
-    modified_by_id:         Mapped[int | None]       = mapped_column(BigInteger)
+    updated_at:             Mapped[datetime]         = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_by_id:          Mapped[int | None]       = mapped_column(BigInteger)
     created_at:             Mapped[datetime]         = mapped_column(DateTime(timezone=True), server_default=func.now())
     created_by_id:          Mapped[int | None]       = mapped_column(BigInteger)
 

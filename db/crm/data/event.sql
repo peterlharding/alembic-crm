@@ -22,7 +22,7 @@ INSERT INTO public.event (
     owner_id,
     is_reminder_set,
     reminder_datetime,
-    modified_by_id,
+    updated_by_id,
     created_by_id
 ) VALUES
 (

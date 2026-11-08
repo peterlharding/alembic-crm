@@ -55,8 +55,8 @@ CREATE TABLE public.lead (
     operating_systems         text DEFAULT NULL,
     master_record_ref         varchar(18),
 
-    modified_at               timestamptz NOT NULL DEFAULT now(),
-    modified_by_id            bigint,
+    updated_at                timestamptz NOT NULL DEFAULT now(),
+    updated_by_id             bigint,
     created_at                timestamptz NOT NULL DEFAULT now(),
     created_by_id             bigint
 );

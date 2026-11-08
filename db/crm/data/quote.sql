@@ -24,7 +24,7 @@ INSERT INTO public.quote (
     invoice_amount,
     status,
     doc_path,
-    modified_by_id,
+    updated_by_id,
     created_by_id
 ) VALUES
 (

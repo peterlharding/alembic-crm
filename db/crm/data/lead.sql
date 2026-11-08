@@ -34,7 +34,7 @@ INSERT INTO public.lead (
     converted_account_id,
     converted_contact_id,
     converted_opportunity_id,
-    modified_by_id,
+    updated_by_id,
     created_by_id
 ) VALUES
 (

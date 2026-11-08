@@ -13,7 +13,7 @@ INSERT INTO public.note (
     parent_id,
     is_private,
     owner_id,
-    modified_by_id,
+    updated_by_id,
     created_by_id
 ) VALUES
 (
